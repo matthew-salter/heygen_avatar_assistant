@@ -15,19 +15,19 @@ Feel free to play around with the existing code and please leave any feedback fo
 
 3. Run `npm install` (assuming you have npm installed. If not, please follow these instructions: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm/)
 
-4. Enter your HeyGen Enterprise API Token in the `.env` file. Replace `HEYGEN_API_KEY` with your API key. This will allow the Client app to generate secure Access Tokens with which to create interactive sessions.
+4. Configure the required environment variables. The `HEYGEN_API_KEY` value must be rotated because an old key was previously checked into source control. Generate a fresh key and store it alongside `NEXT_PUBLIC_BASE_API_URL` in your hosting provider's environment settings (e.g. Render) so the production app never relies on committed files.
 
-   You can retrieve either the API Key by logging in to HeyGen and navigating to this page in your settings: [https://app.heygen.com/settings?from=&nav=Subscriptions%20%26%20API]. 
+   For local development, copy `.env.example` to `.env.local` and provide the same values. This file is ignored by git and should **not** be committed. You can retrieve the HeyGen API key by logging in to HeyGen and navigating to this page in your settings: [https://app.heygen.com/settings?from=&nav=Subscriptions%20%26%20API].
 
-5. (Optional) If you would like to use the OpenAI features, enter your OpenAI Api Key in the `.env` file.
+5. (Optional) If you would like to use the OpenAI features, add your OpenAI API Key to your environment variable configuration (for local development you can add it to `.env.local`).
 
 6. Run `npm run dev`
 
 ### Starting sessions
 
-NOTE: Make sure you have enter your token into the `.env` file and run `npm run dev`.
+NOTE: Make sure you have configured your environment variables (for local development use `.env.local`) and run `npm run dev`.
 
-To start your 'session' with a Interactive Avatar, first click the 'start' button. If your HeyGen API key is entered into the Server's .env file, then you should see our demo Interactive Avatar appear.
+To start your 'session' with a Interactive Avatar, first click the 'start' button. If your HeyGen API key is available to the server through environment variables, then you should see our demo Interactive Avatar appear.
 
 If you want to see a different Avatar or try a different voice, you can close the session and enter the IDs and then 'start' the session again. Please see below for information on where to retrieve different Avatar and voice IDs that you can use.
 
