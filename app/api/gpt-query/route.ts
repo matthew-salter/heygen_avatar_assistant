@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-// pdf-parse is now imported dynamically inside the handler
 import mammoth from "mammoth";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { parseStringPromise } from "xml2js";
 import JSZip from "jszip";
+import { PDFDocument } from "pdf-lib";
 import OpenAI from "openai";
 
 const {
@@ -93,11 +93,17 @@ export async function POST(req: NextRequest) {
           docs.push({ name: f.name, text: text.slice(0, MAX_DOC_LENGTH) });
 
         } else if (lower.endsWith(".pdf")) {
-          // dynamic import for pdf-parse
-          const { default: pdfParse } = await import("pdf-parse");
+          // PDF parsing with pdf-lib (basic example: page count only)
           const buffer = Buffer.from(await fileRes.arrayBuffer());
-          const parsed = await pdfParse(buffer);
-          docs.push({ name: f.name, text: parsed.text.slice(0, MAX_DOC_LENGTH) });
+          const pdfDoc = await PDFDocument.load(buffer);
+          const pages = pdfDoc.getPages();
+          let allText = "";
+
+          // pdf-lib does not have native text extraction; this is a placeholder.
+          // To extract real text, integrate pdfjs-dist later.
+          allText = `PDF file with ${pages.length} pages. (Full text extraction requires pdfjs-dist)\n`;
+
+          docs.push({ name: f.name, text: allText.slice(0, MAX_DOC_LENGTH) });
 
         } else if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
           const buffer = Buffer.from(await fileRes.arrayBuffer());

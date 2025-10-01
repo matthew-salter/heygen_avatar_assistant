@@ -31,7 +31,6 @@
     "@types/jszip": "^3.4.1",
     "@types/node": "20.5.7",
     "@types/papaparse": "^5.3.16",
-    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.1.2",
     "@types/xlsx": "^0.0.36",
