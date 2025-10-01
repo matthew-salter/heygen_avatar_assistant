@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import pdfParse from "pdf-parse";
+// pdf-parse is now imported dynamically inside the handler
 import mammoth from "mammoth";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
@@ -93,6 +93,8 @@ export async function POST(req: NextRequest) {
           docs.push({ name: f.name, text: text.slice(0, MAX_DOC_LENGTH) });
 
         } else if (lower.endsWith(".pdf")) {
+          // dynamic import for pdf-parse
+          const { default: pdfParse } = await import("pdf-parse");
           const buffer = Buffer.from(await fileRes.arrayBuffer());
           const parsed = await pdfParse(buffer);
           docs.push({ name: f.name, text: parsed.text.slice(0, MAX_DOC_LENGTH) });
