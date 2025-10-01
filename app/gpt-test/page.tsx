@@ -58,6 +58,8 @@ export default function GptTestPage() {
           borderRadius: 8,
           border: "1px solid #ddd",
           marginBottom: 12,
+          background: "#fff",
+          color: "#000",
         }}
       />
 
