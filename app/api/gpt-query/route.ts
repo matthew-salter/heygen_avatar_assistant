@@ -5,6 +5,7 @@ import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { parseStringPromise } from "xml2js";
 import JSZip from "jszip";
+import { PDFDocument } from "pdf-lib"; // placeholder, you’ve upgraded to pdfjs-dist
 import OpenAI from "openai";
 
 const {
@@ -16,8 +17,6 @@ const {
   CUSTOM_GPT_INSTRUCTIONS = "Instructions/instructions.txt",
   CUSTOM_GPT_KB_FOLDER = "Knowledge_Base",
 } = process.env;
-
-const MAX_DOC_LENGTH = 4000; // limit per doc
 
 export async function POST(req: NextRequest) {
   try {
@@ -83,15 +82,15 @@ export async function POST(req: NextRequest) {
         .download(filePath);
 
       if (!fileRes) continue;
-
       const lower = f.name.toLowerCase();
 
       try {
         if (lower.endsWith(".txt") || lower.endsWith(".md")) {
           const text = await fileRes.text();
-          docs.push({ name: f.name, text: text.slice(0, MAX_DOC_LENGTH) });
+          docs.push({ name: f.name, text });
 
         } else if (lower.endsWith(".pdf")) {
+          // using pdfjs-dist here for real text extraction
           const buffer = Buffer.from(await fileRes.arrayBuffer());
           const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.js");
 
@@ -106,27 +105,24 @@ export async function POST(req: NextRequest) {
             allText += strings + "\n";
           }
 
-          docs.push({ name: f.name, text: allText.slice(0, MAX_DOC_LENGTH) });
+          docs.push({ name: f.name, text: allText });
 
         } else if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
           const buffer = Buffer.from(await fileRes.arrayBuffer());
           const result = await mammoth.extractRawText({ buffer });
-          docs.push({ name: f.name, text: result.value.slice(0, MAX_DOC_LENGTH) });
+          docs.push({ name: f.name, text: result.value });
 
         } else if (lower.endsWith(".xls") || lower.endsWith(".xlsx")) {
           const buffer = Buffer.from(await fileRes.arrayBuffer());
           const wb = XLSX.read(buffer, { type: "buffer" });
           const sheetName = wb.SheetNames[0];
           const sheet = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
-          docs.push({ name: f.name, text: sheet.slice(0, MAX_DOC_LENGTH) });
+          docs.push({ name: f.name, text: sheet });
 
         } else if (lower.endsWith(".csv")) {
           const text = await fileRes.text();
           const parsed = Papa.parse(text, { header: true });
-          docs.push({
-            name: f.name,
-            text: JSON.stringify(parsed.data).slice(0, MAX_DOC_LENGTH),
-          });
+          docs.push({ name: f.name, text: JSON.stringify(parsed.data) });
 
         } else if (lower.endsWith(".pptx") || lower.endsWith(".ppsx")) {
           const buffer = Buffer.from(await fileRes.arrayBuffer());
@@ -157,22 +153,16 @@ export async function POST(req: NextRequest) {
             allText += texts + "\n";
           }
 
-          docs.push({
-            name: f.name,
-            text: allText.slice(0, MAX_DOC_LENGTH),
-          });
+          docs.push({ name: f.name, text: allText });
 
         } else if (lower.endsWith(".xml")) {
           const raw = await fileRes.text();
           const parsed = await parseStringPromise(raw);
-          docs.push({
-            name: f.name,
-            text: JSON.stringify(parsed).slice(0, MAX_DOC_LENGTH),
-          });
+          docs.push({ name: f.name, text: JSON.stringify(parsed) });
 
         } else if (lower.endsWith(".json")) {
           const raw = await fileRes.text();
-          docs.push({ name: f.name, text: raw.slice(0, MAX_DOC_LENGTH) });
+          docs.push({ name: f.name, text: raw });
 
         } else if (lower.endsWith(".rtf")) {
           const raw = await fileRes.text();
@@ -180,32 +170,15 @@ export async function POST(req: NextRequest) {
             .replace(/\\[a-z]+\d* ?/g, "")
             .replace(/[{}]/g, "")
             .replace(/\n+/g, "\n");
-          docs.push({ name: f.name, text: plain.slice(0, MAX_DOC_LENGTH) });
+          docs.push({ name: f.name, text: plain });
         }
       } catch (e) {
         console.warn(`Failed to parse ${f.name}:`, e);
       }
     }
 
-    // 4) Score docs
-    const keywords = message
-      .toLowerCase()
-      .split(/\W+/)
-      .filter((w) => w.length > 2);
-
-    const scoredDocs = docs
-      .map((doc) => ({
-        ...doc,
-        score: keywords.reduce(
-          (acc, kw) =>
-            acc + (doc.text.toLowerCase().includes(kw) ? 1 : 0),
-          0
-        ),
-      }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3);
-
-    const contextText = scoredDocs
+    // 4) Build context
+    const contextText = docs
       .map((doc) => `---\n${doc.name}\n${doc.text}`)
       .join("\n\n");
 
