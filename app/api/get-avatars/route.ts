@@ -9,17 +9,13 @@ const supabase = createClient(
 export async function GET() {
   const { data, error } = await supabase
     .storage
-    .from("panelitix") // 👈 use your bucket name here
+    .from("panelitix") // 👈 replace with your actual bucket name
     .list("Heygen_Avatar_Assistant");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Only return folders
-  const avatars = data
-    .filter((d) => d.metadata?.name === null) // ensures it's a folder
-    .map((d) => d.name);
-
+  const avatars = data.map((d) => d.name); // folder names
   return NextResponse.json(avatars);
 }
