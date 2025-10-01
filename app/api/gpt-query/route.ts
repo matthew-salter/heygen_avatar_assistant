@@ -5,7 +5,7 @@ import mammoth from "mammoth";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { parseStringPromise } from "xml2js";
-import pptxParser from "pptx-parser";
+import JSZip from "jszip";
 import OpenAI from "openai";
 
 const {
@@ -18,7 +18,7 @@ const {
   CUSTOM_GPT_KB_FOLDER = "Knowledge_Base",
 } = process.env;
 
-const MAX_DOC_LENGTH = 4000; // chars per doc
+const MAX_DOC_LENGTH = 4000; // limit per doc
 
 export async function POST(req: NextRequest) {
   try {
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3) Download + parse KB docs
+    // 3) Download & parse KB docs
     const docs: { name: string; text: string }[] = [];
 
     for (const f of kbFiles) {
@@ -84,35 +84,31 @@ export async function POST(req: NextRequest) {
         .download(filePath);
 
       if (!fileRes) continue;
+
       const lower = f.name.toLowerCase();
 
       try {
         if (lower.endsWith(".txt") || lower.endsWith(".md")) {
           const text = await fileRes.text();
           docs.push({ name: f.name, text: text.slice(0, MAX_DOC_LENGTH) });
+
         } else if (lower.endsWith(".pdf")) {
           const buffer = Buffer.from(await fileRes.arrayBuffer());
           const parsed = await pdfParse(buffer);
-          docs.push({
-            name: f.name,
-            text: parsed.text.slice(0, MAX_DOC_LENGTH),
-          });
+          docs.push({ name: f.name, text: parsed.text.slice(0, MAX_DOC_LENGTH) });
+
         } else if (lower.endsWith(".docx") || lower.endsWith(".doc")) {
           const buffer = Buffer.from(await fileRes.arrayBuffer());
           const result = await mammoth.extractRawText({ buffer });
-          docs.push({
-            name: f.name,
-            text: result.value.slice(0, MAX_DOC_LENGTH),
-          });
+          docs.push({ name: f.name, text: result.value.slice(0, MAX_DOC_LENGTH) });
+
         } else if (lower.endsWith(".xls") || lower.endsWith(".xlsx")) {
           const buffer = Buffer.from(await fileRes.arrayBuffer());
           const wb = XLSX.read(buffer, { type: "buffer" });
           const sheetName = wb.SheetNames[0];
           const sheet = XLSX.utils.sheet_to_csv(wb.Sheets[sheetName]);
-          docs.push({
-            name: f.name,
-            text: sheet.slice(0, MAX_DOC_LENGTH),
-          });
+          docs.push({ name: f.name, text: sheet.slice(0, MAX_DOC_LENGTH) });
+
         } else if (lower.endsWith(".csv")) {
           const text = await fileRes.text();
           const parsed = Papa.parse(text, { header: true });
@@ -120,16 +116,41 @@ export async function POST(req: NextRequest) {
             name: f.name,
             text: JSON.stringify(parsed.data).slice(0, MAX_DOC_LENGTH),
           });
+
         } else if (lower.endsWith(".pptx") || lower.endsWith(".ppsx")) {
           const buffer = Buffer.from(await fileRes.arrayBuffer());
-          const slides = await pptxParser(buffer);
-          const allText = slides
-            .map((s: any) => s.texts.map((t: any) => t.text).join(" "))
-            .join("\n");
+          const zip = await JSZip.loadAsync(buffer);
+
+          let allText = "";
+          const slideFiles = Object.keys(zip.files).filter((f) =>
+            f.startsWith("ppt/slides/slide")
+          );
+
+          for (const slideName of slideFiles) {
+            const slideXml = await zip.files[slideName].async("string");
+            const parsed = await parseStringPromise(slideXml);
+            const texts =
+              parsed?.["p:sld"]?.["p:cSld"]?.[0]?.["p:spTree"]?.[0]?.["p:sp"]
+                ?.map((s: any) =>
+                  s["p:txBody"]
+                    ? s["p:txBody"][0]["a:p"]
+                        .map((p: any) =>
+                          p["a:r"]
+                            ? p["a:r"].map((r: any) => r["a:t"]).join(" ")
+                            : ""
+                        )
+                        .join(" ")
+                    : ""
+                )
+                .join(" ") || "";
+            allText += texts + "\n";
+          }
+
           docs.push({
             name: f.name,
             text: allText.slice(0, MAX_DOC_LENGTH),
           });
+
         } else if (lower.endsWith(".xml")) {
           const raw = await fileRes.text();
           const parsed = await parseStringPromise(raw);
@@ -137,22 +158,18 @@ export async function POST(req: NextRequest) {
             name: f.name,
             text: JSON.stringify(parsed).slice(0, MAX_DOC_LENGTH),
           });
+
         } else if (lower.endsWith(".json")) {
           const raw = await fileRes.text();
-          docs.push({
-            name: f.name,
-            text: raw.slice(0, MAX_DOC_LENGTH),
-          });
+          docs.push({ name: f.name, text: raw.slice(0, MAX_DOC_LENGTH) });
+
         } else if (lower.endsWith(".rtf")) {
           const raw = await fileRes.text();
           const plain = raw
             .replace(/\\[a-z]+\d* ?/g, "")
             .replace(/[{}]/g, "")
             .replace(/\n+/g, "\n");
-          docs.push({
-            name: f.name,
-            text: plain.slice(0, MAX_DOC_LENGTH),
-          });
+          docs.push({ name: f.name, text: plain.slice(0, MAX_DOC_LENGTH) });
         }
       } catch (e) {
         console.warn(`Failed to parse ${f.name}:`, e);
