@@ -94,7 +94,22 @@ export default function TestAvatarPage() {
 
       // 4) Attach to <video>
       if (videoRef.current) {
-        await client.attachToElement(videoRef.current);
+        const stream = await client.createStartAvatar({
+          avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
+          quality: config.heygens.quality || "medium",
+          language: config.heygens.language || "en",
+          transport: config.heygens.transport || "websocket",
+          emotion: config.heygens.emotion || "neutral",
+          voice: {
+            provider: config.voice.provider,
+            model: config.voice.model,
+            voiceId: config.voice.customVoiceId,
+            voice_settings: config.voice.voice_settings,
+          },
+        });
+
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
 
       setStatus("Avatar started and streaming.");
