@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { StreamingAvatar } from "@heygen/streaming-avatar";
+import { StreamingAvatarClient } from "@heygen/streaming-avatar";
 
 type AvatarConfig = {
   displayName: string;
@@ -31,7 +31,7 @@ export default function TestAvatarPage() {
   const [context, setContext] = useState<{ instructions: string; knowledge: string } | null>(null);
   const [status, setStatus] = useState<string>("Loading config…");
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const avatarRef = useRef<StreamingAvatar | null>(null);
+  const avatarRef = useRef<StreamingAvatarClient | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -70,16 +70,19 @@ export default function TestAvatarPage() {
     try {
       // 1) get access token
       const tokenRes = await fetch("/api/get-access-token");
-      const tokenJson = await tokenRes.json(); // now guaranteed to be JSON
+      const tokenJson = await tokenRes.json();
       if (!tokenRes.ok) throw new Error(tokenJson.error || "Failed to get access token");
       const token: string = tokenJson.token;
 
-      // 2) init SDK
-      const avatar = new StreamingAvatar({ token });
-      avatarRef.current = avatar;
+      // 2) init client
+      const client = new StreamingAvatarClient({ token });
+      avatarRef.current = client;
 
-      // 3) start session
-      await avatar.createStartAvatar({
+      // 3) connect to session
+      await client.connect();
+
+      // 4) start avatar
+      await client.startAvatar({
         avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
         quality: config.heygens.quality || "low",
         language: config.heygens.language || "English",
@@ -89,12 +92,14 @@ export default function TestAvatarPage() {
           provider: config.voice.provider,
           voiceId: config.voice.customVoiceId,
           model: config.voice.model,
-          voice_settings: config.voice.voice_settings, // may be ignored by SDK
+          voice_settings: config.voice.voice_settings,
         },
       });
 
-      // 4) attach stream to <video>
-      if (videoRef.current) avatar.attachToElement(videoRef.current);
+      // 5) attach video
+      if (videoRef.current) {
+        await client.attachToElement(videoRef.current);
+      }
 
       setStatus("Avatar started and streaming.");
     } catch (e: any) {

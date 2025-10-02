@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { parseStringPromise } from "xml2js";
 import JSZip from "jszip";
-import { PDFDocument } from "pdf-lib"; // placeholder, you’ve upgraded to pdfjs-dist
+import * as pdfjsLib from "pdfjs-dist";
 import OpenAI from "openai";
 
 const {
