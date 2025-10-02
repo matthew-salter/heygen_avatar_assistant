@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { StreamingAvatar } from "@heygen/streaming-avatar";
 
 type AvatarConfig = {
   displayName: string;
@@ -8,8 +9,8 @@ type AvatarConfig = {
     avatarId?: string;
     customAvatarId?: string;
     language?: string;
-    quality?: "low"|"medium"|"high";
-    transport?: "websocket"|"livekit";
+    quality?: "low" | "medium" | "high";
+    transport?: "websocket" | "livekit";
     emotion?: string;
   };
   voice: {
@@ -20,16 +21,17 @@ type AvatarConfig = {
       speaking_rate?: number;
       stability?: number;
       similarity_boost?: number;
-    }
+    };
   };
   stt: { provider: string };
 };
 
 export default function TestAvatarPage() {
   const [config, setConfig] = useState<AvatarConfig | null>(null);
-  const [context, setContext] = useState<{instructions: string; knowledge: string} | null>(null);
+  const [context, setContext] = useState<{ instructions: string; knowledge: string } | null>(null);
   const [status, setStatus] = useState<string>("Loading config…");
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const avatarRef = useRef<any>(null);
 
   useEffect(() => {
     (async () => {
@@ -61,45 +63,42 @@ export default function TestAvatarPage() {
     })();
   }, []);
 
-  // 🔌 NEXT: wire HeyGen start here (websocket by default)
   async function startAvatar() {
     if (!config) return;
     setStatus("Starting avatar…");
 
     try {
-      // 3) get access token from your existing API
+      // 1) get access token from your existing API
       const tokenRes = await fetch("/api/get-access-token");
       const tokenJson = await tokenRes.json();
       if (!tokenRes.ok) throw new Error(tokenJson.error || "Failed to get access token");
       const token = tokenJson?.token || tokenJson?.access_token || tokenJson?.data?.token;
 
-      // 4) (SDK stub) create/start HeyGen streaming avatar
-      // You likely have the HeyGen SDK already in the repo; if not:
-      //   npm i @heygen/streaming-avatar
-      //
-      // import { StreamingAvatar } from "@heygen/streaming-avatar";
-      // const avatar = new StreamingAvatar({ token });
-      //
-      // await avatar.createStartAvatar({
-      //   // try avatarId; if not found, pass customAvatarId (public avatar name)
-      //   avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
-      //   quality: config.heygens.quality || "low",
-      //   // voice payload — different SDK versions differ; this is a common pattern:
-      //   voice: {
-      //     provider: config.voice.provider,
-      //     voiceId: config.voice.customVoiceId,
-      //     model: config.voice.model,
-      //     // experimental: may be ignored by SDK if not exposed:
-      //     voice_settings: config.voice.voice_settings,
-      //   },
-      //   // where to render video:
-      //   container: videoRef.current as unknown as HTMLElement, // some SDKs accept video element or div container
-      //   transport: config.heygens.transport || "websocket",
-      //   emotion: config.heygens.emotion || "neutral",
-      // });
+      // 2) init SDK
+      const avatar = new StreamingAvatar({ token });
+      avatarRef.current = avatar;
 
-      // For now, we’ll just confirm config loaded; next step we’ll drop in real SDK call.
-      setStatus("Avatar would start here (SDK call stubbed).");
+      // 3) start streaming avatar session
+      const session = await avatar.createStartAvatar({
+        avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
+        quality: config.heygens.quality || "low",
+        language: config.heygens.language || "English",
+        transport: config.heygens.transport || "websocket",
+        emotion: config.heygens.emotion || "neutral",
+        voice: {
+          provider: config.voice.provider,
+          voiceId: config.voice.customVoiceId,
+          model: config.voice.model,
+          voice_settings: config.voice.voice_settings, // may or may not be respected by HeyGen
+        },
+      });
+
+      // 4) attach avatar video to element
+      if (videoRef.current) {
+        avatar.attachToElement(videoRef.current);
+      }
+
+      setStatus("Avatar started and streaming.");
     } catch (e: any) {
       setStatus(`Start error: ${e.message}`);
     }
@@ -118,8 +117,14 @@ export default function TestAvatarPage() {
         Start Avatar
       </button>
 
-      {/* Where the video/avatar UI will render */}
-      <video ref={videoRef} autoPlay playsInline muted style={{ width: 640, height: 360, background: "#000" }} />
+      {/* Where the avatar video will render */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{ width: 640, height: 360, background: "#000" }}
+      />
 
       <details>
         <summary>Show loaded config</summary>
@@ -129,14 +134,16 @@ export default function TestAvatarPage() {
       <details>
         <summary>Show instructions (first 2,000 chars)</summary>
         <pre style={{ whiteSpace: "pre-wrap" }}>
-          {context?.instructions?.slice(0, 2000) || "(none)"}{(context?.instructions?.length ?? 0) > 2000 ? "…(truncated)" : ""}
+          {context?.instructions?.slice(0, 2000) || "(none)"}
+          {(context?.instructions?.length ?? 0) > 2000 ? "…(truncated)" : ""}
         </pre>
       </details>
 
       <details>
         <summary>Show KB (first 2,000 chars)</summary>
         <pre style={{ whiteSpace: "pre-wrap" }}>
-          {context?.knowledge?.slice(0, 2000) || "(none)"}{(context?.knowledge?.length ?? 0) > 2000 ? "…(truncated)" : ""}
+          {context?.knowledge?.slice(0, 2000) || "(none)"}
+          {(context?.knowledge?.length ?? 0) > 2000 ? "…(truncated)" : ""}
         </pre>
       </details>
     </div>
