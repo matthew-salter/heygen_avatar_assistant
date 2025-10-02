@@ -78,7 +78,7 @@ export default function TestAvatarPage() {
       avatarRef.current = client;
 
       // 3) Start avatar (⚠️ no client.connect() in v2.0.13)
-      await client.startAvatar({
+      await client.createStartAvatar({
         avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
         quality: config.heygens.quality || "medium",
         language: (config.heygens.language || "en") as string,
