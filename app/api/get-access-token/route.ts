@@ -27,7 +27,6 @@ export async function GET() {
     );
   }
 
-  // Return the raw token object (with `token` field) from HeyGen
-  return NextResponse.json(json.data);
+  // ✅ Return just the raw JWT string
+  return NextResponse.json({ token: json.data.token });
 }
-
