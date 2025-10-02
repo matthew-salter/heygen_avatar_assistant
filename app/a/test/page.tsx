@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-// ⬇️ DEFAULT import (no braces)
-import StreamingAvatar from "@heygen/streaming-avatar";
+// Default import for this SDK build
+import { StreamingAvatar } from "@heygen/streaming-avatar";
 
 type AvatarConfig = {
   displayName: string;
@@ -32,13 +32,12 @@ export default function TestAvatarPage() {
   const [context, setContext] = useState<{ instructions: string; knowledge: string } | null>(null);
   const [status, setStatus] = useState<string>("Loading config…");
   const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  // The SDK type isn’t exported in a way TS can grab cleanly here, so keep it simple:
-  const avatarRef = useRef<any>(null);
+  const avatarRef = useRef<any>(null); // keep simple for this SDK typing
 
   useEffect(() => {
     (async () => {
       try {
+        // Load config
         const cfgRes = await fetch("/api/get-avatar-config");
         const cfg = await cfgRes.json();
         if (!cfgRes.ok) {
@@ -48,6 +47,7 @@ export default function TestAvatarPage() {
         setConfig(cfg);
         setStatus("Config loaded. Loading context…");
 
+        // Load instructions + KB
         const ctxRes = await fetch("/api/get-avatar-context");
         const ctx = await ctxRes.json();
         if (!ctxRes.ok) {
@@ -67,18 +67,20 @@ export default function TestAvatarPage() {
     setStatus("Starting avatar…");
 
     try {
-      // 1) Get access token
+      // 1) Get a fresh one-time token
       const tokenRes = await fetch("/api/get-access-token");
       const tokenJson = await tokenRes.json();
-      if (!tokenRes.ok) throw new Error(tokenJson.error || "Failed to get access token");
+      if (!tokenRes.ok || !tokenJson?.token) {
+        throw new Error(tokenJson?.error || "Failed to get access token");
+      }
       const token: string = tokenJson.token;
 
-      // 2) Init client
+      // 2) Init client with token
       const client = new (StreamingAvatar as any)({ token });
       avatarRef.current = client;
 
-      // 3) Start avatar (⚠️ no client.connect() in v2.0.13)
-      await client.createStartAvatar({
+      // 3) Start avatar (this build returns a MediaStream)
+      const stream: MediaStream = await client.createStartAvatar({
         avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
         quality: config.heygens.quality || "medium",
         language: (config.heygens.language || "en") as string,
@@ -92,24 +94,10 @@ export default function TestAvatarPage() {
         },
       });
 
-      // 4) Attach to <video>
+      // 4) Pipe MediaStream to <video>
       if (videoRef.current) {
-        const stream = await client.createStartAvatar({
-          avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
-          quality: config.heygens.quality || "medium",
-          language: config.heygens.language || "en",
-          transport: config.heygens.transport || "websocket",
-          emotion: config.heygens.emotion || "neutral",
-          voice: {
-            provider: config.voice.provider,
-            model: config.voice.model,
-            voiceId: config.voice.customVoiceId,
-            voice_settings: config.voice.voice_settings,
-          },
-        });
-
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        await videoRef.current.play().catch(() => void 0);
       }
 
       setStatus("Avatar started and streaming.");
