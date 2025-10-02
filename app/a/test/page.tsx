@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { StreamingAvatarClient } from "@heygen/streaming-avatar-sdk";
+import { StreamingAvatar } from "@heygen/streaming-avatar";  // ✅ works with ^2.0.13
 
 type AvatarConfig = {
   displayName: string;
@@ -33,10 +33,10 @@ export default function TestAvatarPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const avatarRef = useRef<StreamingAvatar | null>(null);
 
+  // Load config + context
   useEffect(() => {
     (async () => {
       try {
-        // 1) load config
         const cfgRes = await fetch("/api/get-avatar-config");
         const cfg = await cfgRes.json();
         if (cfgRes.ok) {
@@ -47,7 +47,6 @@ export default function TestAvatarPage() {
           return;
         }
 
-        // 2) load instructions + knowledge
         const ctxRes = await fetch("/api/get-avatar-context");
         const ctx = await ctxRes.json();
         if (ctxRes.ok) {
@@ -55,7 +54,6 @@ export default function TestAvatarPage() {
           setStatus("Ready");
         } else {
           setStatus(`Context error: ${ctx.error || "unknown"}`);
-          return;
         }
       } catch (e: any) {
         setStatus(`Load error: ${e.message}`);
@@ -84,19 +82,19 @@ export default function TestAvatarPage() {
       // 4) start avatar
       await client.startAvatar({
         avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
-        quality: config.heygens.quality || "low",
-        language: config.heygens.language || "English",
+        quality: config.heygens.quality || "medium",
+        language: config.heygens.language || "en",
         transport: config.heygens.transport || "websocket",
         emotion: config.heygens.emotion || "neutral",
         voice: {
           provider: config.voice.provider,
-          voiceId: config.voice.customVoiceId,
           model: config.voice.model,
+          voiceId: config.voice.customVoiceId,
           voice_settings: config.voice.voice_settings,
         },
       });
 
-      // 5) attach video
+      // 5) attach stream to <video>
       if (videoRef.current) {
         await client.attachToElement(videoRef.current);
       }
