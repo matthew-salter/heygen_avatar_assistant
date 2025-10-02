@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-// ⬇️ DEFAULT import (no braces) — this is the key change
+// ⬇️ DEFAULT import (no braces)
 import StreamingAvatar from "@heygen/streaming-avatar";
 
 type AvatarConfig = {
@@ -77,10 +77,7 @@ export default function TestAvatarPage() {
       const client = new (StreamingAvatar as any)({ token });
       avatarRef.current = client;
 
-      // 3) Connect
-      await client.connect();
-
-      // 4) Start avatar
+      // 3) Start avatar (⚠️ no client.connect() in v2.0.13)
       await client.startAvatar({
         avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
         quality: config.heygens.quality || "medium",
@@ -95,7 +92,7 @@ export default function TestAvatarPage() {
         },
       });
 
-      // 5) Attach to <video>
+      // 4) Attach to <video>
       if (videoRef.current) {
         await client.attachToElement(videoRef.current);
       }
