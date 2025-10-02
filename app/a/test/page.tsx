@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { StreamingAvatarClient } from "@heygen/streaming-avatar";
+import { StreamingAvatar } from "@heygen/streaming-avatar";  // ✅ correct for v2.1.0
 
 type AvatarConfig = {
   displayName: string;
@@ -31,7 +31,7 @@ export default function TestAvatarPage() {
   const [context, setContext] = useState<{ instructions: string; knowledge: string } | null>(null);
   const [status, setStatus] = useState<string>("Loading config…");
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const avatarRef = useRef<StreamingAvatarClient | null>(null);
+  const avatarRef = useRef<StreamingAvatar | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -75,7 +75,7 @@ export default function TestAvatarPage() {
       const token: string = tokenJson.token;
 
       // 2) init client
-      const client = new StreamingAvatarClient({ token });
+      const client = new StreamingAvatar({ token });
       avatarRef.current = client;
 
       // 3) connect to session
