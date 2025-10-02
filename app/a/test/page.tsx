@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { StreamingAvatar } from "@heygen/streaming-avatar";
+// ⬇️ DEFAULT import (no braces) — this is the key change
+import StreamingAvatar from "@heygen/streaming-avatar";
 
 type AvatarConfig = {
   displayName: string;
@@ -31,30 +32,30 @@ export default function TestAvatarPage() {
   const [context, setContext] = useState<{ instructions: string; knowledge: string } | null>(null);
   const [status, setStatus] = useState<string>("Loading config…");
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const avatarRef = useRef<StreamingAvatar | null>(null);
 
-  // Load config + context
+  // The SDK type isn’t exported in a way TS can grab cleanly here, so keep it simple:
+  const avatarRef = useRef<any>(null);
+
   useEffect(() => {
     (async () => {
       try {
         const cfgRes = await fetch("/api/get-avatar-config");
         const cfg = await cfgRes.json();
-        if (cfgRes.ok) {
-          setConfig(cfg);
-          setStatus("Config loaded. Loading context…");
-        } else {
+        if (!cfgRes.ok) {
           setStatus(`Config error: ${cfg.error || "unknown"}`);
           return;
         }
+        setConfig(cfg);
+        setStatus("Config loaded. Loading context…");
 
         const ctxRes = await fetch("/api/get-avatar-context");
         const ctx = await ctxRes.json();
-        if (ctxRes.ok) {
-          setContext(ctx);
-          setStatus("Ready");
-        } else {
+        if (!ctxRes.ok) {
           setStatus(`Context error: ${ctx.error || "unknown"}`);
+          return;
         }
+        setContext(ctx);
+        setStatus("Ready");
       } catch (e: any) {
         setStatus(`Load error: ${e.message}`);
       }
@@ -66,25 +67,25 @@ export default function TestAvatarPage() {
     setStatus("Starting avatar…");
 
     try {
-      // 1) get access token
+      // 1) Get access token
       const tokenRes = await fetch("/api/get-access-token");
       const tokenJson = await tokenRes.json();
       if (!tokenRes.ok) throw new Error(tokenJson.error || "Failed to get access token");
       const token: string = tokenJson.token;
 
-      // 2) init client
-      const client = new StreamingAvatar({ token });
+      // 2) Init client
+      const client = new (StreamingAvatar as any)({ token });
       avatarRef.current = client;
 
-      // 3) connect to session
+      // 3) Connect
       await client.connect();
 
-      // 4) start avatar
+      // 4) Start avatar
       await client.startAvatar({
         avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
         quality: config.heygens.quality || "medium",
-        language: config.heygens.language || "en",
-        transport: config.heygens.transport || "websocket",
+        language: (config.heygens.language || "en") as string,
+        transport: (config.heygens.transport || "websocket") as "websocket" | "livekit",
         emotion: config.heygens.emotion || "neutral",
         voice: {
           provider: config.voice.provider,
@@ -94,7 +95,7 @@ export default function TestAvatarPage() {
         },
       });
 
-      // 5) attach stream to <video>
+      // 5) Attach to <video>
       if (videoRef.current) {
         await client.attachToElement(videoRef.current);
       }
