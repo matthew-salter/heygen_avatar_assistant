@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
         } else if (lower.endsWith(".pdf")) {
           // using pdfjs-dist here for real text extraction
           const buffer = Buffer.from(await fileRes.arrayBuffer());
-          const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.js");
+          const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf");
 
           const loadingTask = pdfjsLib.getDocument({ data: buffer });
           const pdf = await loadingTask.promise;
