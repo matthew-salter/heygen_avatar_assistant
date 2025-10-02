@@ -31,7 +31,7 @@ export default function TestAvatarPage() {
   const [context, setContext] = useState<{ instructions: string; knowledge: string } | null>(null);
   const [status, setStatus] = useState<string>("Loading config…");
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const avatarRef = useRef<any>(null);
+  const avatarRef = useRef<StreamingAvatar | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -68,18 +68,18 @@ export default function TestAvatarPage() {
     setStatus("Starting avatar…");
 
     try {
-      // 1) get access token from your existing API
+      // 1) get access token
       const tokenRes = await fetch("/api/get-access-token");
-      const tokenJson = await tokenRes.json();
+      const tokenJson = await tokenRes.json(); // now guaranteed to be JSON
       if (!tokenRes.ok) throw new Error(tokenJson.error || "Failed to get access token");
-      const token = tokenJson?.token || tokenJson?.access_token || tokenJson?.data?.token;
+      const token: string = tokenJson.token;
 
       // 2) init SDK
       const avatar = new StreamingAvatar({ token });
       avatarRef.current = avatar;
 
-      // 3) start streaming avatar session
-      const session = await avatar.createStartAvatar({
+      // 3) start session
+      await avatar.createStartAvatar({
         avatarName: config.heygens.avatarId || config.heygens.customAvatarId,
         quality: config.heygens.quality || "low",
         language: config.heygens.language || "English",
@@ -89,14 +89,12 @@ export default function TestAvatarPage() {
           provider: config.voice.provider,
           voiceId: config.voice.customVoiceId,
           model: config.voice.model,
-          voice_settings: config.voice.voice_settings, // may or may not be respected by HeyGen
+          voice_settings: config.voice.voice_settings, // may be ignored by SDK
         },
       });
 
-      // 4) attach avatar video to element
-      if (videoRef.current) {
-        avatar.attachToElement(videoRef.current);
-      }
+      // 4) attach stream to <video>
+      if (videoRef.current) avatar.attachToElement(videoRef.current);
 
       setStatus("Avatar started and streaming.");
     } catch (e: any) {
@@ -117,7 +115,6 @@ export default function TestAvatarPage() {
         Start Avatar
       </button>
 
-      {/* Where the avatar video will render */}
       <video
         ref={videoRef}
         autoPlay

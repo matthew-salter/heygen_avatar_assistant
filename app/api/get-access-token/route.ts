@@ -1,31 +1,42 @@
-const HEYGEN_API_KEY = process.env.NEXT_PUBLIC_HEYGEN_API_KEY;
+import { NextResponse } from "next/server";
 
-export async function POST() {
-  try {
-    if (!HEYGEN_API_KEY) {
-      throw new Error("API key is missing from NEXT_PUBLIC_HEYGEN_API_KEY");
-    }
-    const baseApiUrl = process.env.NEXT_PUBLIC_BASE_API_URL;
-
-    const res = await fetch(`${baseApiUrl}/v1/streaming.create_token`, {
-      method: "POST",
-      headers: {
-        "x-api-key": HEYGEN_API_KEY,
-      },
-    });
-
-    console.log("Response:", res);
-
-    const data = await res.json();
-
-    return new Response(data.data.token, {
-      status: 200,
-    });
-  } catch (error) {
-    console.error("Error retrieving access token:", error);
-
-    return new Response("Failed to retrieve access token", {
-      status: 500,
-    });
+export async function GET() {
+  const apiKey = process.env.HEYGEN_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "Missing HEYGEN_API_KEY" }, { status: 500 });
   }
+
+  const res = await fetch("https://api.heygen.com/v1/streaming.create_token", {
+    method: "POST",
+    headers: {
+      "X-Api-Key": apiKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}), // body can be empty
+  });
+
+  const raw = await res.text();
+  let json: any;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return NextResponse.json(
+      { error: "Unexpected response from HeyGen", raw: raw.slice(0, 300) },
+      { status: 502 }
+    );
+  }
+
+  if (!res.ok) {
+    return NextResponse.json(
+      { error: json?.error || "HeyGen token error", details: json },
+      { status: res.status }
+    );
+  }
+
+  const token = json?.data?.token;
+  if (!token) {
+    return NextResponse.json({ error: "No token in HeyGen response", details: json }, { status: 502 });
+  }
+
+  return NextResponse.json({ token });
 }
