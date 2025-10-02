@@ -27,13 +27,7 @@ export async function GET() {
     );
   }
 
-  const token = json?.data?.token;
-  if (!token) {
-    return NextResponse.json(
-      { error: "No token in HeyGen response", details: json },
-      { status: 502 }
-    );
-  }
-
-  return NextResponse.json({ token });
+  // Return the raw token object (with `token` field) from HeyGen
+  return NextResponse.json(json.data);
 }
+
