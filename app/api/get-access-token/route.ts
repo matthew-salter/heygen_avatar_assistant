@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  // Debug: check if env var is actually injected
-  console.log("DEBUG HEYGEN_API_KEY:", process.env.HEYGEN_API_KEY?.slice(0, 6));
-
   const apiKey = process.env.HEYGEN_API_KEY;
+
   if (!apiKey) {
     return NextResponse.json(
       { error: "Missing HEYGEN_API_KEY" },
@@ -15,22 +13,12 @@ export async function GET() {
   const res = await fetch("https://api.heygen.com/v1/streaming.create_token", {
     method: "POST",
     headers: {
-      "X-Api-Key": apiKey,
+      "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({}), // body can be empty
   });
 
-  const raw = await res.text();
-  let json: any;
-  try {
-    json = JSON.parse(raw);
-  } catch {
-    return NextResponse.json(
-      { error: "Unexpected response from HeyGen", raw: raw.slice(0, 300) },
-      { status: 502 }
-    );
-  }
+  const json = await res.json();
 
   if (!res.ok) {
     return NextResponse.json(
