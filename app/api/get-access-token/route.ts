@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
+  // Debug: check if env var is actually injected
+  console.log("DEBUG HEYGEN_API_KEY:", process.env.HEYGEN_API_KEY?.slice(0, 6));
+
   const apiKey = process.env.HEYGEN_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: "Missing HEYGEN_API_KEY" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Missing HEYGEN_API_KEY" },
+      { status: 500 }
+    );
   }
 
   const res = await fetch("https://api.heygen.com/v1/streaming.create_token", {
@@ -35,18 +41,11 @@ export async function GET() {
 
   const token = json?.data?.token;
   if (!token) {
-    return NextResponse.json({ error: "No token in HeyGen response", details: json }, { status: 502 });
+    return NextResponse.json(
+      { error: "No token in HeyGen response", details: json },
+      { status: 502 }
+    );
   }
 
   return NextResponse.json({ token });
-}
-
-export async function GET() {
-  console.log("DEBUG HEYGEN_API_KEY:", process.env.HEYGEN_API_KEY?.slice(0, 6));
-
-  const apiKey = process.env.HEYGEN_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: "Missing HEYGEN_API_KEY" }, { status: 500 });
-  }
-  ...
 }
