@@ -40,3 +40,13 @@ export async function GET() {
 
   return NextResponse.json({ token });
 }
+
+export async function GET() {
+  console.log("DEBUG HEYGEN_API_KEY:", process.env.HEYGEN_API_KEY?.slice(0, 6));
+
+  const apiKey = process.env.HEYGEN_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json({ error: "Missing HEYGEN_API_KEY" }, { status: 500 });
+  }
+  ...
+}
