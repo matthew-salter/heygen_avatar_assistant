@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { StreamingAvatar } from "@heygen/streaming-avatar";  // ✅ works with ^2.0.13
+import { StreamingAvatar } from "@heygen/streaming-avatar";
 
 type AvatarConfig = {
   displayName: string;
